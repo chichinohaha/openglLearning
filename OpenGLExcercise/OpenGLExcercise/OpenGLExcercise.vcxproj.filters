@@ -40,8 +40,10 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="vertex.glsl" />
-    <None Include="fragment.glsl" />
+    <None Include="fragment.frag" />
+    <None Include="vertex.vert" />
+    <None Include="lightFragment.frag" />
+    <None Include="lightVertex.vert" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="container.jpg">

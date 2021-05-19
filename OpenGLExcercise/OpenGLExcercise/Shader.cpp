@@ -40,11 +40,11 @@ Shader::Shader(const char* vertexFilePath, const char* fragmentFilePath)
 		glShaderSource(fragment, 1, &fragmentSource, NULL);
 		glCompileShader(fragment);
 		checkCompileError(fragment, CheckType::shader);
-		shaderProgram = glCreateProgram();
-		glAttachShader(shaderProgram, vertex);
-		glAttachShader(shaderProgram, fragment);
-		glLinkProgram(shaderProgram);
-		checkCompileError(shaderProgram, CheckType::program);
+		ID = glCreateProgram();
+		glAttachShader(ID, vertex);
+		glAttachShader(ID, fragment);
+		glLinkProgram(ID);
+		checkCompileError(ID, CheckType::program);
 		glDeleteShader(fragment);
 		glDeleteShader(vertex);
 		printf(vertexSource);
@@ -60,7 +60,7 @@ Shader::Shader(const char* vertexFilePath, const char* fragmentFilePath)
 
 void Shader::use()
 {
-	glUseProgram(shaderProgram);
+	glUseProgram(ID);
 }
 
 void Shader::checkCompileError(const unsigned int id, CheckType checkType)
