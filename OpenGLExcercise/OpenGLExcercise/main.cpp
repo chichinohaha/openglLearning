@@ -207,9 +207,9 @@ int main() {
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)3);
-
 	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+	glEnableVertexAttribArray(1);
 
 
 	// second, configure the light's VAO (VBO stays the same; the vertices are the same for the light object which is also a 3D cube)
@@ -221,9 +221,9 @@ int main() {
 	glBindBuffer(GL_ARRAY_BUFFER, vbo);
 
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)3);
-
 	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+	glEnableVertexAttribArray(1);
 #pragma endregion
 #pragma region Init and load Textures
 	unsigned int texBuffer1 = loadImageToGPU("container.jpg", GL_RGB, GL_RGB, 0);
@@ -245,7 +245,7 @@ int main() {
 	projection = glm::perspective(glm::radians(45.0f), WINDOW_WIDTH / WINDOW_HEIGHT, 0.1f, 100.0f);
 
 #pragma region light
-	glm::vec3 lightPos;
+	glm::vec3 lightPos(1.2f, 1.0f, 2.0f);
 #pragma endregion
 
 
@@ -255,7 +255,7 @@ int main() {
 	while (!glfwWindowShouldClose(window)) {
 		// Process Input
 		processInput(window);
-		glm::mat4 model(1.0f);
+	
 		// Clear Screen
 		// 清除颜色缓冲区 重置为指定颜色
 		glClearColor(0.18f, 0.04f, 0.14f, 1.0f);
@@ -264,10 +264,13 @@ int main() {
 		shader.use();
 		shader.setMat4("view", view);
 		shader.setMat4("projection", projection);
+		glm::mat4 model(1.0f);
 		shader.setMat4("model", model);
 		shader.setVec3("objectColor", 1.0f, 0.5f, 0.31f);
+		shader.setVec3("ambientColor", 1.0f, 1.0f, 1.0f);
 		shader.setVec3("lightColor", 1.0f, 1.0f, 1.0f);
-
+		shader.setVec3("lightPos", lightPos);
+		shader.setVec3("cameraPos", camera.position);
 		glBindVertexArray(vao);
 		glDrawArrays(GL_TRIANGLES, 0, 36);
 
@@ -277,6 +280,7 @@ int main() {
 		lightShader.setMat4("model", model);
 		lightShader.setMat4("view", view);
 		lightShader.setMat4("projection", projection);
+		lightShader.setVec3("lightPos", lightPos);
 		glBindVertexArray(lightCubeVAO);
 		glDrawArrays(GL_TRIANGLES, 0, 36);
 
