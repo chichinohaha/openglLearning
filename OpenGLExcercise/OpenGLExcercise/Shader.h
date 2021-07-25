@@ -11,6 +11,10 @@ enum class CheckType
 class Shader
 {
 public:
+    enum ImageSlot {
+        DIFFUSE,
+        SPECULAR
+    };
 	Shader(const char* vertexFile, const char* fragmentFile);
 	std::string vertexString;
 	std::string fragmentString;
@@ -78,9 +82,7 @@ public:
     {
         glUniformMatrix4fv(glGetUniformLocation(ID, name.c_str()), 1, GL_FALSE, &mat[0][0]);
     }
-    inline void setUniform(const std::string& name) {
-        glUniform1i(glGetUniformLocation(ID, "texture1"), 0);
-    }
+
 
 };
 
