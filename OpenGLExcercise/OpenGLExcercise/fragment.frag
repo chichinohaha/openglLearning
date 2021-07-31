@@ -3,8 +3,8 @@
 #define LENGTH_OF_SPOTLIGHT 4
 
 struct Material{
-    sampler2D diffuse;
-    sampler2D specular;
+    sampler2D diffuse1;
+    sampler2D specular1;
     float shininess;
 };
 struct DirectionLight {
@@ -53,14 +53,14 @@ uniform vec3 objectColor;
 uniform vec3 cameraPos;
 vec3 getDirectionLight(DirectionLight light,vec3 uNormal,vec3 dirToCamera){
     // ambient
-    vec3 ambientColor = light.ambient * texture2D(material.diffuse,TexCoords).rgb;
+    vec3 ambientColor = light.ambient * texture2D(material.diffuse1,TexCoords).rgb;
     // diffuse
     float diffuseIntensity = max( dot(-light.direction,uNormal),0);
-    vec3 diffuseColor = diffuseIntensity * light.diffuse * texture2D(material.diffuse,TexCoords).rgb;
+    vec3 diffuseColor = diffuseIntensity * light.diffuse * texture2D(material.diffuse1,TexCoords).rgb;
     // specular pow(max(dot(R,cam),0),material.shininess)
     vec3 R = normalize(reflect(light.direction,uNormal));
     float specularIntensity= pow(max(dot(R,dirToCamera),0),material.shininess);
-    vec3 specularColor = specularIntensity * light.specular * texture2D(material.specular,TexCoords).rgb;
+    vec3 specularColor = specularIntensity * light.specular * texture2D(material.specular1,TexCoords).rgb;
     vec3 result = diffuseColor + specularColor + ambientColor;
     return result;
 }
@@ -70,14 +70,14 @@ vec3 getPointLight(PointLight light, vec3 uNormal, vec3 dirToCamera){
     float dist = length(light.position - FragPos);
     float attenuation = 1/(light.constant + light.linear * dist + light.quadratic * pow(dist,2));
     // ambient
-    vec3 ambientColor = light.ambient * texture2D(material.diffuse,TexCoords).rgb;
+    vec3 ambientColor = light.ambient * texture2D(material.diffuse1,TexCoords).rgb;
     // diffuse
     float diffuseIntensity = max( dot(normalize(light.position - FragPos),uNormal),0);
-    vec3 diffuseColor = diffuseIntensity * light.diffuse * attenuation * texture2D(material.diffuse,TexCoords).rgb;
+    vec3 diffuseColor = diffuseIntensity * light.diffuse * attenuation * texture2D(material.diffuse1,TexCoords).rgb;
     // specular
     vec3 R = normalize(reflect(normalize(light.position - FragPos),uNormal));
     float specularIntensity= pow(max(dot(R,dirToCamera),0),material.shininess);
-    vec3 specularColor = specularIntensity * light.specular * attenuation * texture2D(material.specular,TexCoords).rgb;
+    vec3 specularColor = specularIntensity * light.specular * attenuation * texture2D(material.specular1,TexCoords).rgb;
     vec3 result = ambientColor + diffuseColor + specularColor;
     return result;
 }
@@ -92,14 +92,14 @@ vec3 getSpotLight(SpotLight light, vec3 uNormal,vec3 dirToCamera){
     float dist = length(light.position - FragPos);
     float attenuation = 1/(light.constant + light.linear * dist + light.quadratic * pow(dist,2));
     // ambient
-    vec3 ambientColor = light.ambient * texture2D(material.diffuse,TexCoords).rgb * attenuation;
+    vec3 ambientColor = light.ambient * texture2D(material.diffuse1,TexCoords).rgb * attenuation;
     // diffuse
     float diffuseIntensity = max( dot(normalize(light.position - FragPos),uNormal),0) ;
-    vec3 diffuseColor = diffuseIntensity * light.diffuse * attenuation * texture2D(material.diffuse,TexCoords).rgb * intensity;    
+    vec3 diffuseColor = diffuseIntensity * light.diffuse * attenuation * texture2D(material.diffuse1,TexCoords).rgb * intensity;    
     // specular
     vec3 R = reflect(lightDir,uNormal);
     float specularIntensity = pow(max(dot(R,dirToCamera),0),material.shininess);
-    vec3 specularColor = specularIntensity *light.specular * texture2D(material.specular,TexCoords).rgb * intensity; 
+    vec3 specularColor = specularIntensity *light.specular * texture2D(material.specular1,TexCoords).rgb * intensity; 
     vec3 result = ambientColor + diffuseColor + specularColor;
     return result;
 }
