@@ -162,9 +162,15 @@ int main(int argc, char* argv[]) {
 		return -1;
 	}
 	glViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
+// configure global opengl state
+  // -----------------------------
 	glEnable(GL_DEPTH_TEST);
+	glDepthFunc(GL_LESS);
+	glEnable(GL_STENCIL_TEST);
 	glEnable(GL_CULL_FACE);
 	glCullFace(GL_BACK);
+	glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
+	glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
 	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 	glfwSetCursorPosCallback(window, mouse_callback);
 #pragma endregion
@@ -254,6 +260,10 @@ int main(int argc, char* argv[]) {
 		spotLight.applyToShader("spotLight");
 #pragma endregion
 		manModel.Draw(&shader);
+
+		shader.setMat4("model", glm::translate(model, glm::vec3(8, 0, 0)));
+		manModel.Draw(&shader);
+
 		// 2nd. render pass: now draw slightly scaled versions of the objects, this time disabling stencil writing.
 		// Because the stencil buffer is now filled with several 1s. The parts of the buffer that are 1 are not drawn, thus only drawing 
 		// the objects' size differences, making it look like borders.
@@ -266,7 +276,7 @@ int main(int argc, char* argv[]) {
 		singleColorShader.setMat4("view", view);
 		singleColorShader.setMat4("projection", projection);
 		singleColorShader.setMat4("model", model);
-		singleColorShader.setFloat("scale", 1.1f);
+		singleColorShader.setFloat("scale", 0.1f);
 		singleColorShader.setMat4("normalTransform", normalTrasform);
 #pragma endregion
 		manModel.Draw(&shader);
