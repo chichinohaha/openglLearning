@@ -91,7 +91,8 @@ void processInput(GLFWwindow* window)
 		camera.position += glm::normalize(camera.up) * cameraSpeed;
 	if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
 		camera.position -= glm::normalize(camera.up) * cameraSpeed;
-	
+	if (glfwGetKey(window, GLFW_KEY_TAB) == GLFW_PRESS)
+		glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 
 };
 // 键盘回调函数原型声明
@@ -176,7 +177,8 @@ int main(int argc, char* argv[]) {
 
 #pragma region Init shader program
 	Shader shader = Shader("vertex.vert", "fragment.frag");
-	shader.use();
+	Shader singleColorShader = Shader("singleColorV.vert", "singleColorF.frag");
+
 #pragma endregion
 
 #pragma region Prepare MVP matrices
@@ -217,7 +219,13 @@ int main(int argc, char* argv[]) {
 		// Clear Screen
 		// 清除颜色缓冲区 重置为指定颜色
 		glClearColor(0.18f, 0.04f, 0.14f, 1.0f);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+		glEnable(GL_DEPTH_TEST);
+		// 1st. render pass, draw objects as normal, writing to the stencil buffer
+// --------------------------------------------------------------------
+		glStencilFunc(GL_ALWAYS, 1, 0xFF);
+		glStencilMask(0xFF);
+#pragma region shader setting
 		glm::mat4 view = camera.getViewMatrix();
 		shader.use();
 		shader.setMat4("view", view);
@@ -244,7 +252,28 @@ int main(int argc, char* argv[]) {
 		spotLight.position = camera.position;
 		spotLight.direction = -1.0f * camera.front;
 		spotLight.applyToShader("spotLight");
+#pragma endregion
 		manModel.Draw(&shader);
+		// 2nd. render pass: now draw slightly scaled versions of the objects, this time disabling stencil writing.
+		// Because the stencil buffer is now filled with several 1s. The parts of the buffer that are 1 are not drawn, thus only drawing 
+		// the objects' size differences, making it look like borders.
+		// -----------------------------------------------------------------------------------------------------------------------------
+		glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
+		glStencilMask(0x00);
+		glDisable(GL_DEPTH_TEST);
+#pragma region borderShader setting
+		singleColorShader.use();
+		singleColorShader.setMat4("view", view);
+		singleColorShader.setMat4("projection", projection);
+		singleColorShader.setMat4("model", model);
+		singleColorShader.setFloat("scale", 1.1f);
+		singleColorShader.setMat4("normalTransform", normalTrasform);
+#pragma endregion
+		manModel.Draw(&shader);
+		glBindVertexArray(0);
+		glStencilMask(0xFF);
+		glStencilFunc(GL_ALWAYS, 0, 0xFF);
+		glEnable(GL_DEPTH_TEST);
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 	}

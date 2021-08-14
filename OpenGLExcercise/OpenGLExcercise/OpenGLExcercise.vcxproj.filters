@@ -117,6 +117,8 @@
     <None Include="lightFragment.frag" />
     <None Include="lightVertex.vert" />
     <None Include="packages.config" />
+    <None Include="singleColorF.frag" />
+    <None Include="singleColorV.vert" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="container.jpg">
