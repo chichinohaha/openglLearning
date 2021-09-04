@@ -188,15 +188,22 @@
     <None Include="lightFragment.frag" />
     <None Include="lightVertex.vert" />
     <None Include="packages.config" />
+    <None Include="plane.frag" />
+    <None Include="plane.vert" />
+    <None Include="scene.frag" />
+    <None Include="scene.vert" />
     <None Include="singleColorF.frag" />
     <None Include="singleColorV.vert" />
     <None Include="vertex.vert" />
   </ItemGroup>
   <ItemGroup>
+    <Image Include="6.jpg" />
     <Image Include="awesomeface.png" />
+    <Image Include="window.png" />
     <Image Include="container.jpg" />
     <Image Include="container2.png" />
     <Image Include="container2_specular.png" />
+    <Image Include="grass.png" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

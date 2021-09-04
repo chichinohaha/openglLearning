@@ -112,13 +112,37 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="fragment.frag" />
-    <None Include="vertex.vert" />
-    <None Include="lightFragment.frag" />
-    <None Include="lightVertex.vert" />
     <None Include="packages.config" />
-    <None Include="singleColorF.frag" />
-    <None Include="singleColorV.vert" />
+    <None Include="fragment.frag">
+      <Filter>资源文件</Filter>
+    </None>
+    <None Include="lightVertex.vert">
+      <Filter>资源文件</Filter>
+    </None>
+    <None Include="lightFragment.frag">
+      <Filter>资源文件</Filter>
+    </None>
+    <None Include="singleColorF.frag">
+      <Filter>资源文件</Filter>
+    </None>
+    <None Include="singleColorV.vert">
+      <Filter>资源文件</Filter>
+    </None>
+    <None Include="vertex.vert">
+      <Filter>资源文件</Filter>
+    </None>
+    <None Include="plane.frag">
+      <Filter>资源文件</Filter>
+    </None>
+    <None Include="plane.vert">
+      <Filter>资源文件</Filter>
+    </None>
+    <None Include="scene.frag">
+      <Filter>资源文件</Filter>
+    </None>
+    <None Include="scene.vert">
+      <Filter>资源文件</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Image Include="container.jpg">
@@ -131,6 +155,15 @@
       <Filter>资源文件</Filter>
     </Image>
     <Image Include="container2_specular.png">
+      <Filter>资源文件</Filter>
+    </Image>
+    <Image Include="grass.png">
+      <Filter>资源文件</Filter>
+    </Image>
+    <Image Include="6.jpg">
+      <Filter>资源文件</Filter>
+    </Image>
+    <Image Include="window.png">
       <Filter>资源文件</Filter>
     </Image>
   </ItemGroup>
