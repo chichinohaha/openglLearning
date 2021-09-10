@@ -345,7 +345,7 @@ int main(int argc, char* argv[]) {
 #pragma endregion
 #pragma region Init and load Textures
 	auto cubeTexture = loadImageToGPU("container.jpg");
-	auto floorTexture = loadImageToGPU("6.jpg");
+	auto floorTexture = loadImageToGPU("awesomeface.png");
 	auto transparentTexture = loadImageToGPU("window.png");
 	auto grassTexture = loadImageToGPU("grass.png");
 
@@ -425,6 +425,7 @@ int main(int argc, char* argv[]) {
 		// make sure we clear the framebuffer's content
 		glClearColor(0.18f, 0.04f, 0.14f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		glViewport(0, 0, WINDOW_WIDTH , WINDOW_HEIGHT);
 
 
 #pragma region shader setting
@@ -470,14 +471,18 @@ int main(int argc, char* argv[]) {
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		glDisable(GL_DEPTH_TEST); // disable depth test so screen-space quad isn't discarded due to depth test.
 		// clear all relevant buffers
-		glClearColor(0.18f, 0.04f, 0.14f, 1.0f);
+		//glClearColor(0.18f, 0.04f, 0.14f, 1.0f);
 		// set clear color to white (not really necessary actually, since we won't be able to see behind the quad anyways)
-		glClear(GL_COLOR_BUFFER_BIT);
 		sceneShader.use();
 		glBindVertexArray(quadVAO);
 		glBindTexture(GL_TEXTURE_2D, textureColorbuffer);	// use the color attachment texture as the texture of the quad plane
-		glDrawArrays(GL_TRIANGLES, 0, 6);
+		glViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
+		sceneShader.setBool("invert", false);
 
+		glDrawArrays(GL_TRIANGLES, 0, 6);
+		sceneShader.setBool("invert", true);
+		glViewport(400, 300, WINDOW_WIDTH / 2, WINDOW_HEIGHT / 2);
+		glDrawArrays(GL_TRIANGLES, 0, 6);
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 	}
