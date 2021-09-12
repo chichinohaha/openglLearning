@@ -14,7 +14,7 @@
 #include "DirectionLight.h"
 #include "Model.h"
 #include "sstream"
-
+#include  <GL/glu.h>
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 #include <map>
@@ -23,176 +23,179 @@ void error_callback(int error, const char* description) {
 }
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
+// Determine whether a ray intersect with a triangle
+// Parameters
+// orig: origin of the ray
+// dir: direction of the ray
+// v0, v1, v2: vertices of triangle
+// t(out): weight of the intersection for the ray
+// u(out), v(out): barycentric coordinate of intersection
 
+bool IntersectTriangle(const glm::vec3& orig, const glm::vec3& dir,
+	glm::vec3& v0, glm::vec3& v1, glm::vec3& v2,
+	float* t, float* u, float* v)
+{
+	
+	std::cout << "  triangle0 x:" << v0[0] << "  y:" << v0[1] << "  z:" << v0[2] << std::endl;
+	std::cout << "  triangle1 x:" << v1[0] << "  y:" << v1[1] << "  z:" << v1[2] << std::endl;
+	std::cout << "  triangle2 x:" << v2[0] << "  y:" << v2[1] << "  z:" << v2[2] << std::endl;
+	// E1
+	glm::vec3 E1 = v1 - v0;
+
+	// E2
+	glm::vec3 E2 = v2 - v0;
+
+	// P
+	glm::vec3 P = glm::cross(dir,E2);
+
+	// determinant
+	float det = glm::dot(E1,P);
+
+	// keep det > 0, modify T accordingly
+	glm::vec3 T;
+	if (det > 0)
+	{
+		T = orig - v0;
+	}
+	else
+	{
+		T = v0 - orig;
+		det = -det;
+	}
+
+	// If determinant is near zero, ray lies in plane of triangle
+	if (det < 0.0001f)
+		return false;
+
+	// Calculate u and make sure u <= 1
+	*u = glm::dot(T,P);
+	if (*u < 0.0f || *u > det)
+		return false;
+
+	// Q
+	glm::vec3 Q = glm::cross(T,E1);
+
+	// Calculate v and make sure u + v <= 1
+	*v = glm::dot(dir,Q);
+	if (*v < 0.0f || *u + *v > det)
+		return false;
+
+	// Calculate t, scale parameters, ray intersects triangle
+	*t = glm::dot(E2,Q);
+
+	float fInvDet = 1.0f / det;
+	*t *= fInvDet;
+	*u *= fInvDet;
+	*v *= fInvDet;
+
+	return true;
+}
 
 const float WINDOW_WIDTH = 800, WINDOW_HEIGHT = 600;
 #pragma region Camera
-
+//glm::vec2 translations[100] = {};
+int selectedID = 0;
 float lastX = 400, lastY = 300;
 bool firstMouse = true;
+double winX;
+double winY;
+bool rightMouseButtonDown = false;
+bool leftMouseButtonDown = false;
+glm::mat4 projection = glm::perspective(glm::radians(45.0f), WINDOW_WIDTH / WINDOW_HEIGHT, 0.1f, 100.0f);
+//glm::mat4 projection = glm::ortho(-100,100,-100,100);
 Camera camera = Camera(glm::vec3(0, 0, 3.0f));
-
+glm::vec3 unProject(glm::vec3 screen) {
+	glm::mat4 view = camera.getViewMatrix();
+	GLint viewport[4];
+	glGetIntegerv(GL_VIEWPORT, viewport); // 得到的是最后一个设置视口的参数
+	auto rayClip = glm::vec4(2.0f * (screen.x - viewport[0]) / viewport[2] - 1.0f, -2.0f * (screen.y - viewport[1]) / viewport[3] + 1, screen.z * 2.0f - 1.0f, 1.0f);
+	auto rayEye = glm::inverse(projection) * rayClip;
+	glm::vec4 rayPoint = glm::inverse(view) * rayEye;
+	glm::vec3 posOut = glm::vec3(rayPoint);
+	posOut /= rayPoint.w;
+	return posOut;
+}
 #pragma endregion
 
 #pragma region Model
-float cubeVertices[] = {
-	// positions          // texture Coords
-	-0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
-	 0.5f, -0.5f, -0.5f,  1.0f, 0.0f,
-	 0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-	 0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-	-0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
-	-0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
-
-	-0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-	 0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
-	 0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
-	 0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
-	-0.5f,  0.5f,  0.5f,  0.0f, 1.0f,
-	-0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-
-	-0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-	-0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-	-0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-	-0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-	-0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-	-0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-
-	 0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-	 0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-	 0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-	 0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-	 0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-	 0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-
-	-0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-	 0.5f, -0.5f, -0.5f,  1.0f, 1.0f,
-	 0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
-	 0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
-	-0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-	-0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-
-	-0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
-	 0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-	 0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-	 0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-	-0.5f,  0.5f,  0.5f,  0.0f, 0.0f,
-	-0.5f,  0.5f, -0.5f,  0.0f, 1.0f
+float vertices[] = {
+	// positions          // colors
+	 0.05f,  0.05f, 0.0f, 0.0f, 1.0f, 1.0f,
+	 0.05f, -0.05f, 0.0f, 0.0f, 1.0f, 0.0f,
+	-0.05f, -0.05f, 0.0f, 0.0f, 0.0f, 1.0f,
+	-0.05f,  0.05f, 0.0f, 1.0f, 0.0f, 0.0f
 };
 
-float planeVertices[] = {
-	// positions          // texture Coords (note we set these higher than 1 (together with GL_REPEAT as texture wrapping mode). this will cause the floor texture to repeat)
-	 5.0f, -0.5f,  5.0f,  2.0f, 0.0f,
-	-5.0f, -0.5f,  5.0f,  0.0f, 0.0f,
-	-5.0f, -0.5f, -5.0f,  0.0f, 2.0f,
-
-	 5.0f, -0.5f,  5.0f,  2.0f, 0.0f,
-	-5.0f, -0.5f, -5.0f,  0.0f, 2.0f,
-	 5.0f, -0.5f, -5.0f,  2.0f, 2.0f
-};
-
-glm::vec3 pointLightPositions[] = {
-	glm::vec3(0.7f,  0.2f,  2.0f),
-	glm::vec3(2.3f, -3.3f, -4.0f),
-	glm::vec3(-4.0f,  2.0f, -12.0f),
-	glm::vec3(0.0f,  0.0f, -3.0f)
-};
-float transparentVertices[] = {
-	// positions         // texture Coords (swapped y coordinates because texture is flipped upside down)
-	0.0f,  0.5f,  0.0f,  0.0f,  0.0f,
-	0.0f, -0.5f,  0.0f,  0.0f,  1.0f,
-	1.0f, -0.5f,  0.0f,  1.0f,  1.0f,
-
-	0.0f,  0.5f,  0.0f,  0.0f,  0.0f,
-	1.0f, -0.5f,  0.0f,  1.0f,  1.0f,
-	1.0f,  0.5f,  0.0f,  1.0f,  0.0f
-};
-
-std::vector<glm::vec3> windows
-{
-	glm::vec3(-1.5f, 0.0f, -0.48f),
-	glm::vec3(1.5f, 0.0f, 0.51f),
-	glm::vec3(0.0f, 0.0f, 0.7f),
-	glm::vec3(-0.3f, 0.0f, -2.3f),
-	glm::vec3(0.5f, 0.0f, -0.6f)
-};
-
-std::vector<glm::vec3> vegetation
-{
-	glm::vec3(-1.5f, 0.0f, -0.48f),
-	glm::vec3(1.5f, 0.0f, 0.51f),
-	glm::vec3(0.0f, 0.0f, 0.7f),
-	glm::vec3(-0.3f, 0.0f, -2.3f),
-	glm::vec3(0.5f, 0.0f, -0.6f)
-};
-
-float quadVertices[] = { // vertex attributes for a quad that fills the entire screen in Normalized Device Coordinates.
-	// positions   // texCoords
-	-1.0f,  1.0f,  0.0f, 1.0f,
-	-1.0f, -1.0f,  0.0f, 0.0f,
-	 1.0f, -1.0f,  1.0f, 0.0f,
-
-	-1.0f,  1.0f,  0.0f, 1.0f,
-	 1.0f, -1.0f,  1.0f, 0.0f,
-	 1.0f,  1.0f,  1.0f, 1.0f
-};
+unsigned int indices[] = { // 注意索引从0开始! 
+	0, 1, 3, // 第一个三角形
+	1, 2, 3  // 第二个三角形
+};                               
 #pragma endregion
 
 #pragma region Mouse and keyboard callback
 void mouse_callback(GLFWwindow* window, double xpos, double ypos)
 {
-	if (firstMouse)
-	{
+	winX = xpos;
+	winY = ypos;
+	if (rightMouseButtonDown) {
+		if (firstMouse)
+		{
+			lastX = xpos;
+			lastY = ypos;
+			firstMouse = false;
+		}
+
+		float xoffset = xpos - lastX;
+		float yoffset = lastY - ypos;
 		lastX = xpos;
 		lastY = ypos;
-		firstMouse = false;
+
+		float sensitivity = 0.05;
+		xoffset *= sensitivity;
+		yoffset *= sensitivity;
+
+		camera.yaw += xoffset;
+		camera.pitch += yoffset;
+
+		if (camera.pitch > 89.0f)
+			camera.pitch = 89.0f;
+		if (camera.pitch < -89.0f)
+			camera.pitch = -89.0f;
+
 	}
-
-	float xoffset = xpos - lastX;
-	float yoffset = lastY - ypos;
-	lastX = xpos;
-	lastY = ypos;
-
-	float sensitivity = 0.05;
-	xoffset *= sensitivity;
-	yoffset *= sensitivity;
-
-	camera.yaw += xoffset;
-	camera.pitch += yoffset;
-
-	if (camera.pitch > 89.0f)
-		camera.pitch = 89.0f;
-	if (camera.pitch < -89.0f)
-		camera.pitch = -89.0f;
-
+	else {
+		firstMouse = true;
+	}
 }
 void processInput(GLFWwindow* window)
 {
-	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
-		glfwSetWindowShouldClose(window, true);
-	}
-	float cameraSpeed = 0.005f; // adjust accordingly
-	if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) {
-		cameraSpeed = 0.1f;
-	}
-	else {
-		cameraSpeed = 0.005f;
-	}
-	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-		camera.position += cameraSpeed * camera.front;
-	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-		camera.position -= cameraSpeed * camera.front;
-	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-		camera.position -= glm::normalize(glm::cross(camera.front, camera.up)) * cameraSpeed;
-	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-		camera.position += glm::normalize(glm::cross(camera.front, camera.up)) * cameraSpeed;
-	if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
-		camera.position += glm::normalize(camera.up) * cameraSpeed;
-	if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
-		camera.position -= glm::normalize(camera.up) * cameraSpeed;
-	if (glfwGetKey(window, GLFW_KEY_TAB) == GLFW_PRESS)
-		glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+	if (rightMouseButtonDown) {
+		if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
+			glfwSetWindowShouldClose(window, true);
+		}
+		float cameraSpeed = 0.005f; // adjust accordingly
+		if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) {
+			cameraSpeed = 0.1f;
+		}
+		else {
+			cameraSpeed = 0.005f;
+		}
+		if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+			camera.position += cameraSpeed * camera.front;
+		if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+			camera.position -= cameraSpeed * camera.front;
+		if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+			camera.position -= glm::normalize(glm::cross(camera.front, camera.up)) * cameraSpeed;
+		if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+			camera.position += glm::normalize(glm::cross(camera.front, camera.up)) * cameraSpeed;
+		if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
+			camera.position += glm::normalize(camera.up) * cameraSpeed;
+		if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
+			camera.position -= glm::normalize(camera.up) * cameraSpeed;
+		if (glfwGetKey(window, GLFW_KEY_TAB) == GLFW_PRESS)
+			glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 
+	}
 };
 // 键盘回调函数原型声明
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
@@ -201,6 +204,89 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 		glfwSetWindowShouldClose(window, GL_TRUE); // 关闭窗口
 	}
 }
+void mouse_button_callback(GLFWwindow* window, int button, int action, int mods) {
+	if (action == GLFW_PRESS) {
+
+		switch (button)
+		{
+		case GLFW_MOUSE_BUTTON_LEFT: 
+		
+		{
+
+			glm::vec3 nearPoint = unProject(glm::vec3(winX,winY,0));
+			glm::vec3 farPoint = unProject(glm::vec3(winX, winY, 1));
+			glm::vec3 rayOrigin = nearPoint;
+			glm::vec3 rayDir = glm::normalize(farPoint - nearPoint);
+
+			auto minT = 10000000.0f;
+			float t,u,v;
+			std::cout << "  ray point x:" << rayOrigin[0] << "  y:" << rayOrigin[1] << "  z:" << rayOrigin[2] << std::endl;
+			std::cout << "  ray dir x:" << rayDir[0] << "  y:" << rayDir[1] << "  z:" << rayDir[2] << std::endl;
+			for (int i = 0; i < sizeof(indices) / sizeof(*indices) / 3; i++)
+			{
+				glm::vec3 triangle[3];
+				
+					for (int j = 0; j < 3; j++)
+					{
+						auto pointIndex = indices[i * 3 + j];
+						//auto offset = translations[k];
+						auto model = glm::translate(glm::mat4(1.0f),glm::vec3(1.0f,0.0f,0.0f));
+						triangle[j] = model* glm::vec4( vertices[pointIndex * 6] ,vertices[pointIndex * 6 + 1],vertices[pointIndex * 6 + 2] ,1.0f);
+	
+							
+					}
+					auto isIntersect = IntersectTriangle(rayOrigin,rayDir,triangle[0], triangle[1], triangle[2],&t,&u,&v);
+					if (isIntersect) {
+						if (t < minT) {
+							minT = t;
+				
+						}
+						std::cout << "hit" << t << std::endl;
+					}
+				
+			}
+			std::cout << "left button press" << "  x:" << winX << "  y:" << winY  << std::endl;
+			 //now we iterate through all meshes, and find the closest mesh that intersects the camera ray.
+			
+
+		
+		}
+			
+			break;
+		case GLFW_MOUSE_BUTTON_RIGHT:
+			rightMouseButtonDown = true;
+			glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+
+			std::cout << "right button press" << "x:" << winX << "y:" << winY << std::endl;
+			break;
+		case GLFW_MOUSE_BUTTON_MIDDLE:
+
+			std::cout << "middle button press" << "x:" << winX << "y:" << winY << std::endl;
+			break;
+		default:
+			break;
+		}
+	}
+	if (action == GLFW_RELEASE) {
+		switch (button)
+		{
+		case GLFW_MOUSE_BUTTON_LEFT:
+			leftMouseButtonDown = false;
+			break;
+		case GLFW_MOUSE_BUTTON_RIGHT:
+			rightMouseButtonDown = false;
+			glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+
+			break;
+		case GLFW_MOUSE_BUTTON_MIDDLE:
+			break;
+		default:
+			break;
+		}
+	}
+
+}
+
 #pragma endregion
 
 unsigned int loadImageToGPU(const char* path) {
@@ -242,7 +328,6 @@ unsigned int loadImageToGPU(const char* path) {
 int main(int argc, char* argv[]) {
 #pragma region GLFWInitWindow
 	std::string exePath = argv[0];
-	std::cout << exePath.substr(0, exePath.find_last_of('\\'))+ "\\model\\nanosuit.obj" << std::endl;
 	glfwSetErrorCallback(error_callback);
 	if (!glfwInit()) {
 		std::cout << "Failed to init GLFW " << std::endl;
@@ -255,7 +340,7 @@ int main(int argc, char* argv[]) {
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 	// Open GLFW Window
-	auto window = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "nimasile", NULL, NULL);
+	auto window = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "graph", NULL, NULL);
 	if (window == NULL) {
 		std::cout << "Failed to create GLFW window" << std::endl;
 		glfwTerminate();
@@ -268,9 +353,8 @@ int main(int argc, char* argv[]) {
 	glfwSetKeyCallback(window, key_callback);
 	// 注册窗口大小回调
 	glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
-	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 	glfwSetCursorPosCallback(window, mouse_callback);
-
+	glfwSetMouseButtonCallback(window, mouse_button_callback);
 	// 让glew获取所有拓展函数
 	glewExperimental = GL_TRUE;
 	if (glewInit() != GLEW_OK) {
@@ -279,224 +363,88 @@ int main(int argc, char* argv[]) {
 		return -1;
 	}
 	glViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
-// configure global opengl state
-  // -----------------------------
+	// configure global opengl state
+	// -----------------------------
 	glEnable(GL_DEPTH_TEST);
-	/*glDepthFunc(GL_LESS);
-	glEnable(GL_STENCIL_TEST);
-	*///glEnable(GL_CULL_FACE);
-	//glCullFace(GL_BACK);
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	//glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
-	//glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
 
 #pragma endregion
 #pragma region Init and load Model to VAO VBO
-	unsigned int cubeVAO, cubeVBO;
-	glGenVertexArrays(1, &cubeVAO);
-	glGenBuffers(1, &cubeVBO);
-	glBindVertexArray(cubeVAO);
-	glBindBuffer(GL_ARRAY_BUFFER, cubeVBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(cubeVertices), &cubeVertices, GL_STATIC_DRAW);
-	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
-	glEnableVertexAttribArray(1);
-	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
-	glBindVertexArray(0);
-	// plane VAO
-	unsigned int planeVAO, planeVBO;
-	glGenVertexArrays(1, &planeVAO);
-	glGenBuffers(1, &planeVBO);
-	glBindVertexArray(planeVAO);
-	glBindBuffer(GL_ARRAY_BUFFER, planeVBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(planeVertices), &planeVertices, GL_STATIC_DRAW);
-	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
-	glEnableVertexAttribArray(1);
-	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
-	glBindVertexArray(0);
+	unsigned int VBO, VAO, EBO/*, INSTANCEDVBO*/;
+	glGenVertexArrays(1, &VAO);
+	glGenBuffers(1, &VBO);
+	glGenBuffers(1, &EBO);
+	// bind the Vertex Array Object first, then bind and set vertex buffer(s), and then configure vertex attributes(s).
+	glBindVertexArray(VAO);
 
-	// transparent VAO
-	unsigned int transparentVAO, transparentVBO;
-	glGenVertexArrays(1, &transparentVAO);
-	glGenBuffers(1, &transparentVBO);
-	glBindVertexArray(transparentVAO);
-	glBindBuffer(GL_ARRAY_BUFFER, transparentVBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(transparentVertices), transparentVertices, GL_STATIC_DRAW);
+	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+	//int index = 0;
+	//float offset = 0.1f;
+	//for (int y = -10; y < 10; y += 2)
+	//{
+	//	for (int x = -10; x < 10; x += 2)
+	//	{
+	//		glm::vec2 translation;
+	//		translation.x = (float)x / 10.0f + offset;
+	//		translation.y = (float)y / 10.0f + offset;
+	//		translations[index++] = translation;
+	//	}
+	//}
+	////// 将实例的数据单独存在这个 INSTANCEDVBO
+	//glGenBuffers(1,&INSTANCEDVBO);
+	//glBindBuffer(GL_ARRAY_BUFFER, INSTANCEDVBO);
+	//glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec2)*100, &translations[0], GL_STATIC_DRAW);
+
+	// glVertexAttribPointer
+	glBindBuffer(GL_ARRAY_BUFFER, VBO);
 	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
 	glEnableVertexAttribArray(1);
-	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(2 * sizeof(float)));
+	glEnableVertexAttribArray(2);
+	//glBindBuffer(GL_ARRAY_BUFFER, INSTANCEDVBO); // this attribute comes from a different vertex buffer
+	//glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
+	//glVertexAttribDivisor(2, 1); // tell OpenGL this is an instanced vertex attribute.
 
-	unsigned int quadVAO, quadVBO;
-	glGenVertexArrays(1, &quadVAO);
-	glGenBuffers(1, &quadVBO);
-	glBindVertexArray(quadVAO);
-	glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
-	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
-	glEnableVertexAttribArray(1);
-	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
-
-
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 	glBindVertexArray(0);
 #pragma endregion
 #pragma region Init and load Textures
-	auto cubeTexture = loadImageToGPU("container.jpg");
-	auto floorTexture = loadImageToGPU("awesomeface.png");
-	auto transparentTexture = loadImageToGPU("window.png");
-	auto grassTexture = loadImageToGPU("grass.png");
+
 
 #pragma endregion
 
 #pragma region Init shader program
-	//Shader shader = Shader("vertex.vert", "fragment.frag");
-	//Shader singleColorShader = Shader("singleColorV.vert", "singleColorF.frag");
-	Shader simpleShader = Shader("plane.vert", "plane.frag");
-	Shader sceneShader = Shader("scene.vert", "scene.frag");
+	Shader base = Shader("base.vert", "base.frag");
 #pragma endregion
 
 #pragma region Prepare MVP matrices
 	//// 注意，我们将矩阵向我们要进行移动场景的反方向移动。
-	glm::mat4 projection;
-	projection = glm::perspective(glm::radians(45.0f), WINDOW_WIDTH / WINDOW_HEIGHT, 0.1f, 100.0f);
-
-#pragma region light
-	//glm::vec3 lightRotation(45.0f, 45.0f, 2.0f);
-	//glm::vec3 lightDiffuseColor(1.0f, 1.0f, 1.0f);
-	//glm::vec3 lightAmbient(0.1f, 0.1f, 0.1f);
-	//glm::vec3 lightSpecular(1.0f, 1.0f, 1.0f);
-	//DirectionLight light(&shader, lightAmbient, lightDiffuseColor, lightSpecular, lightRotation);
-	//std::allocator<PointLight>alloc;
-	//PointLight* pointLights = alloc.allocate(4);
-	//for (int i = 0; i < 4; i++)
-	//{
-	//	alloc.construct(pointLights + i, &shader, lightAmbient, lightDiffuseColor, lightSpecular, pointLightPositions[i]);
-	//}
-	//SpotLight spotLight(&shader, lightAmbient, lightDiffuseColor, lightSpecular, camera.position, camera.front, glm::vec3(camera.pitch, camera.yaw, camera.roll), 1.0f, 0.09f, 0.032f, 12.5f, 15.0f);
-#pragma endregion
-
-#pragma region material
-	float materialShininess = 64.0f;
-	//Material material(&shader, materialShininess, Shader::DIFFUSE, Shader::SPECULAR);
-#pragma endregion
-	// framebuffer configuration
-// -------------------------
-	unsigned int framebuffer;
-	glGenFramebuffers(1, &framebuffer);
-	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
-	// create a color attachment texture
-	unsigned int textureColorbuffer;
-	glGenTextures(1, &textureColorbuffer);
-	glBindTexture(GL_TEXTURE_2D, textureColorbuffer);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, WINDOW_WIDTH, WINDOW_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, textureColorbuffer, 0);
-	// create a renderbuffer object for depth and stencil attachment (we won't be sampling these)
-	unsigned int rbo;
-	glGenRenderbuffers(1, &rbo);
-	glBindRenderbuffer(GL_RENDERBUFFER, rbo);
-	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, WINDOW_WIDTH, WINDOW_HEIGHT); // use a single renderbuffer object for both a depth AND stencil buffer.
-	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rbo); // now actually attach it
-	// now that we actually created the framebuffer and added all attachments we want to check if it is actually complete now
-	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-		std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-
-#pragma region Model
-	//Model manModel(exePath.substr(0, exePath.find_last_of('\\')) + "\\model\\nanosuit.obj");
-#pragma endregion
 
 #pragma endregion
 	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	while (!glfwWindowShouldClose(window)) {
-		// Process Input
 		processInput(window);
-		// render
-		// ------
-		// bind to framebuffer and draw scene as we normally would to color texture 
-		glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
-		glEnable(GL_DEPTH_TEST); // enable depth testing (is disabled for rendering screen-space quad)
-
-		// make sure we clear the framebuffer's content
-		glClearColor(0.18f, 0.04f, 0.14f, 1.0f);
+		
+		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		glViewport(0, 0, WINDOW_WIDTH , WINDOW_HEIGHT);
-
-
-#pragma region shader setting
-
 		glm::mat4 view = camera.getViewMatrix();
-		simpleShader.use();
-		simpleShader.setMat4("view", view);
-		simpleShader.setMat4("projection", projection);
-		glBindVertexArray(cubeVAO);
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, cubeTexture);
-		glm::mat4 cubeModel = glm::translate(glm::mat4(1.0f), glm::vec3(-1.0f, 0.0f, -1.0f));
-		glBindVertexArray(cubeVAO);
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, cubeTexture);
-		simpleShader.setInt("texture1", 0);
-		cubeModel = glm::translate(cubeModel, glm::vec3(-1.0f, 0.0f, -1.0f));
-		simpleShader.setMat4("model", cubeModel);
-		glDrawArrays(GL_TRIANGLES, 0, 36);
-		cubeModel = glm::mat4(1.0f);
-		cubeModel = glm::translate(cubeModel, glm::vec3(2.0f, 0.0f, 0.0f));
-		simpleShader.setMat4("model", cubeModel);
-		glDrawArrays(GL_TRIANGLES, 0, 36);
-		glBindVertexArray(planeVAO);
-		glBindTexture(GL_TEXTURE_2D, floorTexture);
-		simpleShader.setMat4("model", glm::mat4(1.0f));
-		glDrawArrays(GL_TRIANGLES, 0, 6);
-		// windows (from furthest to nearest)
-		glm::mat4 model = glm::mat4(1.0f);
-		glBindVertexArray(transparentVAO);
-		glBindTexture(GL_TEXTURE_2D, grassTexture);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-		for (unsigned int i = 0; i < vegetation.size(); i++)
-		{
-			model = glm::mat4(1.0f);
-			model = glm::translate(model, vegetation[i]);
-			simpleShader.setMat4("model", model);
-			glDrawArrays(GL_TRIANGLES, 0, 6);
-		}
-		glBindVertexArray(0);
-		// now bind back to default framebuffer and draw a quad plane with the attached framebuffer color texture
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-		glDisable(GL_DEPTH_TEST); // disable depth test so screen-space quad isn't discarded due to depth test.
-		// clear all relevant buffers
-		//glClearColor(0.18f, 0.04f, 0.14f, 1.0f);
-		// set clear color to white (not really necessary actually, since we won't be able to see behind the quad anyways)
-		sceneShader.use();
-		glBindVertexArray(quadVAO);
-		glBindTexture(GL_TEXTURE_2D, textureColorbuffer);	// use the color attachment texture as the texture of the quad plane
-		glViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
-		sceneShader.setBool("invert", false);
 
-		glDrawArrays(GL_TRIANGLES, 0, 6);
-		sceneShader.setBool("invert", true);
-		glViewport(400, 300, WINDOW_WIDTH / 2, WINDOW_HEIGHT / 2);
-		glDrawArrays(GL_TRIANGLES, 0, 6);
+		base.use();
+		base.setMat4("projection", projection);
+		base.setMat4("view", view);
+		base.setMat4("model", glm::translate(glm::mat4(1.0f), glm::vec3(1.0f, 0.0f, 0.0f)));
+		//base.setInt("selectedID", selectedID);
+		glBindVertexArray(VAO);
+		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+		//glDrawElementsInstanced(GL_TRIANGLES, 6,GL_UNSIGNED_INT,0,100);
+
+		glBindVertexArray(0);
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 	}
-	glDeleteVertexArrays(1, &cubeVAO);
-	glDeleteVertexArrays(1, &planeVAO);
-	glDeleteVertexArrays(1, &quadVAO);
-	glDeleteBuffers(1, &cubeVBO);
-	glDeleteBuffers(1, &planeVBO);
-	glDeleteBuffers(1, &quadVBO);
-	//for (int i = 0; i < 4; i++)
-	//{
-	//	alloc.destroy(pointLights + i);
-	//}
-	//alloc.deallocate(pointLights, 4);
+
 	glfwTerminate();
 	return 0;
 }

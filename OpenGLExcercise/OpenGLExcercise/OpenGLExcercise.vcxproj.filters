@@ -113,34 +113,10 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
-    <None Include="fragment.frag">
+    <None Include="base.frag">
       <Filter>资源文件</Filter>
     </None>
-    <None Include="lightVertex.vert">
-      <Filter>资源文件</Filter>
-    </None>
-    <None Include="lightFragment.frag">
-      <Filter>资源文件</Filter>
-    </None>
-    <None Include="singleColorF.frag">
-      <Filter>资源文件</Filter>
-    </None>
-    <None Include="singleColorV.vert">
-      <Filter>资源文件</Filter>
-    </None>
-    <None Include="vertex.vert">
-      <Filter>资源文件</Filter>
-    </None>
-    <None Include="plane.frag">
-      <Filter>资源文件</Filter>
-    </None>
-    <None Include="plane.vert">
-      <Filter>资源文件</Filter>
-    </None>
-    <None Include="scene.frag">
-      <Filter>资源文件</Filter>
-    </None>
-    <None Include="scene.vert">
+    <None Include="base.vert">
       <Filter>资源文件</Filter>
     </None>
   </ItemGroup>
