@@ -186,11 +186,23 @@
   <ItemGroup>
     <None Include="base.frag" />
     <None Include="base.vert" />
+    <None Include="cube.frag" />
+    <None Include="cube.vert" />
+    <None Include="fragment.frag" />
+    <None Include="model.frag" />
+    <None Include="model.vert" />
     <None Include="packages.config" />
+    <None Include="vertex.vert" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="6.jpg" />
     <Image Include="awesomeface.png" />
+    <Image Include="back.jpg" />
+    <Image Include="bottom.jpg" />
+    <Image Include="front.jpg" />
+    <Image Include="left.jpg" />
+    <Image Include="right.jpg" />
+    <Image Include="top.jpg" />
     <Image Include="window.png" />
     <Image Include="container.jpg" />
     <Image Include="container2.png" />

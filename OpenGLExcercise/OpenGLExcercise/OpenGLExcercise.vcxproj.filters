@@ -119,6 +119,24 @@
     <None Include="base.vert">
       <Filter>资源文件</Filter>
     </None>
+    <None Include="cube.vert">
+      <Filter>资源文件</Filter>
+    </None>
+    <None Include="cube.frag">
+      <Filter>资源文件</Filter>
+    </None>
+    <None Include="model.frag">
+      <Filter>资源文件</Filter>
+    </None>
+    <None Include="model.vert">
+      <Filter>资源文件</Filter>
+    </None>
+    <None Include="fragment.frag">
+      <Filter>资源文件</Filter>
+    </None>
+    <None Include="vertex.vert">
+      <Filter>资源文件</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Image Include="container.jpg">
@@ -140,6 +158,24 @@
       <Filter>资源文件</Filter>
     </Image>
     <Image Include="window.png">
+      <Filter>资源文件</Filter>
+    </Image>
+    <Image Include="back.jpg">
+      <Filter>资源文件</Filter>
+    </Image>
+    <Image Include="bottom.jpg">
+      <Filter>资源文件</Filter>
+    </Image>
+    <Image Include="front.jpg">
+      <Filter>资源文件</Filter>
+    </Image>
+    <Image Include="left.jpg">
+      <Filter>资源文件</Filter>
+    </Image>
+    <Image Include="right.jpg">
+      <Filter>资源文件</Filter>
+    </Image>
+    <Image Include="top.jpg">
       <Filter>资源文件</Filter>
     </Image>
   </ItemGroup>
